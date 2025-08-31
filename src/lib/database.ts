@@ -49,7 +49,8 @@ export class DatabaseService {
     try {
       // Check if we should use local database
       if (process.env.DB_ENGINE === 'local') {
-        return await db.getCampaigns()
+        const campaigns = await db.getCampaigns()
+        return campaigns
       }
       
       const supabase = createServiceClient()
@@ -70,7 +71,8 @@ export class DatabaseService {
     try {
       // Check if we should use local database
       if (process.env.DB_ENGINE === 'local') {
-        return await db.getCampaign(id)
+        const campaign = await db.getCampaign(id)
+        return campaign
       }
       
       const supabase = createServiceClient()
