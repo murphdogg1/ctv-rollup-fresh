@@ -48,7 +48,7 @@ export async function GET() {
       error: error instanceof Error ? error.message : "Unknown error",
       envCheck: {
         hasUrl: !!process.env.NEXT_PUBLIC_SUPABASE_URL,
-        hasServiceKey: !!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+        hasAnonKey: !!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
         hasServiceKey: !!process.env.SUPABASE_SERVICE_ROLE_KEY,
         dbEngine: process.env.DB_ENGINE,
       },
