@@ -80,7 +80,7 @@ export class DatabaseService {
       const { data, error } = await supabase
         .from('campaigns')
         .select('*')
-        .eq('id', id)
+        .eq('campaign_id', id)
         .single()
 
       if (error && error.code !== 'PGRST116') {
