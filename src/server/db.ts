@@ -113,7 +113,7 @@ class InMemoryDatabase {
       campaign_id,
       campaign_name: campaignName,
       created_at: new Date()
-    }; return typedCampaign as Campaign;
+    };
     global.__db_campaigns.push(campaign);
     console.log(`Created campaign: ${campaignName} with ID: ${campaign_id}`);
     return campaign;
@@ -150,7 +150,7 @@ class InMemoryDatabase {
       filename,
       stored_path: storedPath,
       uploaded_at: new Date()
-    }; return typedCampaign as Campaign;
+    };
     global.__db_campaign_uploads.push(upload);
     console.log(`Created upload for campaign ${campaignId}: ${filename}`);
     return upload;
@@ -271,7 +271,7 @@ class InMemoryDatabase {
         completes: otherNetworks.reduce((sum, n) => sum + n.completes, 0),
         avg_vcr: 0,
         content_count: otherNetworks.reduce((sum, n) => sum + n.content_count, 0)
-      }; return typedCampaign as Campaign;
+      };
       
       // Calculate VCR for "Other" category
       otherRollup.avg_vcr = otherRollup.impressions > 0 ? 
@@ -405,7 +405,7 @@ class InMemoryDatabase {
         mappedGenres: 0,
         totalGenres: 0,
         mappedPercentage: 0
-      }; return typedCampaign as Campaign;
+      };
     }
     
     const filtered = global.__db_campaign_content_raw.filter(c => c.campaign_id === campaignId);
@@ -425,7 +425,7 @@ class InMemoryDatabase {
       mappedGenres,
       totalGenres,
       mappedPercentage
-    }; return typedCampaign as Campaign;
+    };
   }
 
   // Database operations (stubs for compatibility)
