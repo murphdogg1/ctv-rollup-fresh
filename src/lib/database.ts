@@ -49,8 +49,9 @@ export class DatabaseService {
     try {
       // Check if we should use local database
       if (process.env.DB_ENGINE === 'local') {
-        const campaigns = await db.getCampaigns()
-        return campaigns
+        const localDb = createLocalDatabaseWrapper()
+        return await localDb.getCampaigns()
+
       }
       
       const supabase = createServiceClient()
