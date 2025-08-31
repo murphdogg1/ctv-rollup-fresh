@@ -1,0 +1,103 @@
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import Link from 'next/link'
+
+export default function HomePage() {
+  return (
+    <div className="space-y-6">
+      <div>
+        <h1 className="text-3xl font-bold tracking-tight">CTV Rollup Dashboard</h1>
+        <p className="text-muted-foreground">
+          Ingest, normalize, and analyze CTV delivery logs with deduplication and rollup reporting.
+        </p>
+      </div>
+
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+        <Card>
+          <CardHeader>
+            <CardTitle>Upload Data</CardTitle>
+            <CardDescription>
+              Import CSV or Parquet files containing CTV delivery logs
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Link href="/upload">
+              <Button className="w-full">Upload Files</Button>
+            </Link>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Normalize Data</CardTitle>
+            <CardDescription>
+              Map bundles, genres, and content for consistent analysis
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Link href="/normalize">
+              <Button className="w-full">Manage Mappings</Button>
+            </Link>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>View Reports</CardTitle>
+            <CardDescription>
+              Analyze performance by app, genre, and content
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Link href="/reports">
+              <Button className="w-full">View Reports</Button>
+            </Link>
+          </CardContent>
+        </Card>
+      </div>
+
+      <div className="grid gap-4 md:grid-cols-2">
+        <Card>
+          <CardHeader>
+            <CardTitle>Quick Stats</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex justify-between items-center">
+              <span className="text-sm font-medium">Database Engine</span>
+              <Badge variant="outline">
+                {process.env.DB_ENGINE || 'duckdb'}
+              </Badge>
+            </div>
+            <div className="flex justify-between items-center">
+              <span className="text-sm font-medium">Upload Directory</span>
+              <Badge variant="outline">
+                {process.env.UPLOAD_DIR || './uploads'}
+              </Badge>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Features</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            <div className="flex items-center space-x-2">
+              <Badge variant="secondary">CSV/Parquet Import</Badge>
+            </div>
+            <div className="flex items-center space-x-2">
+              <Badge variant="secondary">Smart Deduplication</Badge>
+            </div>
+            <div className="flex items-center space-x-2">
+              <Badge variant="secondary">Multi-tier Rollups</Badge>
+            </div>
+            <div className="flex items-center space-x-2">
+              <Badge variant="secondary">Export to CSV</Badge>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    </div>
+  )
+}

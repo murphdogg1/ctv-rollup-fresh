@@ -1,0 +1,406 @@
+// Campaign-agnostic database interfaces
+export interface Campaign {
+  campaign_id: string;
+  campaign_name: string;
+  created_at: Date;
+}
+
+export interface CampaignUpload {
+  upload_id: string;
+  campaign_id: string;
+  filename: string;
+  stored_path: string;
+  uploaded_at: Date;
+}
+
+export interface CampaignContentRaw {
+  campaign_id: string;
+  campaign_name_src?: string;
+  content_title: string;
+  content_network_name: string;
+  impression: number;
+  quartile100: number;
+}
+
+export interface ContentAlias {
+  content_title_canon: string;
+  content_key: string;
+  created_at: Date;
+}
+
+export interface GenreMap {
+  raw_genre: string;
+  genre_canon: string;
+  created_at: Date;
+}
+
+export interface AppRollup {
+  campaign_id: string;
+  app_name: string;
+  impressions: number;
+  completes: number;
+  avg_vcr: number;
+  content_count: number;
+}
+
+export interface GenreRollup {
+  campaign_id: string;
+  genre_canon: string;
+  impressions: number;
+  completes: number;
+  avg_vcr: number;
+  content_count: number;
+}
+
+export interface ContentRollup {
+  campaign_id: string;
+  content_key: string;
+  content_title: string;
+  content_network_name: string;
+  impressions: number;
+  completes: number;
+  avg_vcr: number;
+}
+
+class InMemoryDatabase {
+  private campaigns: Campaign[] = [];
+  private campaign_uploads: CampaignUpload[] = [];
+  private campaign_content_raw: CampaignContentRaw[] = [];
+  private content_aliases: ContentAlias[] = [];
+  private genre_map: GenreMap[] = [];
+  private initialized = false;
+
+  constructor() {
+    // Defer initialization to avoid startup crashes
+    this.initializeDatabase();
+  }
+
+  private async initializeDatabase() {
+    try {
+      console.log('Initializing campaign-agnostic database...');
+      this.initialized = true;
+      console.log('Database initialized successfully');
+    } catch (error) {
+      console.error('Database initialization error:', error);
+      // Don't crash, just log the error
+    }
+  }
+
+  // Campaign management
+  async createCampaign(campaignName: string): Promise<Campaign> {
+    if (!this.initialized) {
+      throw new Error('Database not yet initialized');
+    }
+    
+    const campaign_id = this.generateCampaignId(campaignName);
+    const campaign: Campaign = {
+      campaign_id,
+      campaign_name: campaignName,
+      created_at: new Date()
+    };
+    this.campaigns.push(campaign);
+    return campaign;
+  }
+
+  async getCampaigns(): Promise<Campaign[]> {
+    if (!this.initialized) {
+      return [];
+    }
+    return this.campaigns;
+  }
+
+  async getCampaign(campaignId: string): Promise<Campaign | null> {
+    if (!this.initialized) {
+      return null;
+    }
+    return this.campaigns.find(c => c.campaign_id === campaignId) || null;
+  }
+
+  // Upload management
+  async createCampaignUpload(
+    campaignId: string, 
+    filename: string, 
+    storedPath: string
+  ): Promise<CampaignUpload> {
+    if (!this.initialized) {
+      throw new Error('Database not yet initialized');
+    }
+    
+    const upload: CampaignUpload = {
+      upload_id: this.generateUploadId(),
+      campaign_id: campaignId,
+      filename,
+      stored_path: storedPath,
+      uploaded_at: new Date()
+    };
+    this.campaign_uploads.push(upload);
+    return upload;
+  }
+
+  async getCampaignUploads(campaignId: string): Promise<CampaignUpload[]> {
+    if (!this.initialized) {
+      return [];
+    }
+    return this.campaign_uploads.filter(u => u.campaign_id === campaignId);
+  }
+
+  // Content ingestion
+  async insertCampaignContent(content: CampaignContentRaw[]): Promise<number> {
+    if (!this.initialized) {
+      return 0;
+    }
+    this.campaign_content_raw.push(...content);
+    return content.length;
+  }
+
+  // Content normalization
+  async upsertContentAlias(contentTitleCanon: string, contentKey: string): Promise<void> {
+    if (!this.initialized) {
+      return;
+    }
+    
+    const existing = this.content_aliases.findIndex(a => a.content_title_canon === contentTitleCanon);
+    if (existing >= 0) {
+      this.content_aliases[existing].content_key = contentKey;
+    } else {
+      this.content_aliases.push({
+        content_title_canon: contentTitleCanon,
+        content_key: contentKey,
+        created_at: new Date()
+      });
+    }
+  }
+
+  async upsertGenreMap(rawGenre: string, genreCanon: string): Promise<void> {
+    if (!this.initialized) {
+      return;
+    }
+    
+    const existing = this.genre_map.findIndex(g => g.raw_genre === rawGenre);
+    if (existing >= 0) {
+      this.genre_map[existing].genre_canon = genreCanon;
+    } else {
+      this.genre_map.push({
+        raw_genre: rawGenre,
+        genre_canon: genreCanon,
+        created_at: new Date()
+      });
+    }
+  }
+
+  // Rollup generation
+  generateAppRollup(campaignId?: string): AppRollup[] {
+    if (!this.initialized) {
+      return [];
+    }
+    
+    const filtered = campaignId ? 
+      this.campaign_content_raw.filter(c => c.campaign_id === campaignId) : 
+      this.campaign_content_raw;
+    
+    const rollupMap = new Map<string, AppRollup>();
+    
+    for (const content of filtered) {
+      const key = `${content.campaign_id}-${content.content_network_name}`;
+      if (!rollupMap.has(key)) {
+        rollupMap.set(key, {
+          campaign_id: content.campaign_id,
+          app_name: content.content_network_name,
+          impressions: 0,
+          completes: 0,
+          avg_vcr: 0,
+          content_count: 0
+        });
+      }
+      
+      const rollup = rollupMap.get(key)!;
+      rollup.impressions += content.impression || 0;
+      rollup.completes += content.quartile100 || 0;
+      rollup.content_count += 1;
+    }
+    
+    // Calculate average VCR
+    for (const rollup of Array.from(rollupMap.values())) {
+      rollup.avg_vcr = rollup.impressions > 0 ? 
+        Math.round((rollup.completes / rollup.impressions) * 100 * 100) / 100 : 0;
+    }
+    
+    return Array.from(rollupMap.values()).sort((a, b) => b.impressions - a.impressions);
+  }
+
+  generateGenreRollup(campaignId?: string): GenreRollup[] {
+    if (!this.initialized) {
+      return [];
+    }
+    
+    const filtered = campaignId ? 
+      this.campaign_content_raw.filter(c => c.campaign_id === campaignId) : 
+      this.campaign_content_raw;
+    
+    const rollupMap = new Map<string, GenreRollup>();
+    
+    for (const content of filtered) {
+      const genreCanon = this.getGenreCanon(content.content_network_name);
+      const key = `${content.campaign_id}-${genreCanon}`;
+      if (!rollupMap.has(key)) {
+        rollupMap.set(key, {
+          campaign_id: content.campaign_id,
+          genre_canon: genreCanon,
+          impressions: 0,
+          completes: 0,
+          avg_vcr: 0,
+          content_count: 0
+        });
+      }
+      
+      const rollup = rollupMap.get(key)!;
+      rollup.impressions += content.impression || 0;
+      rollup.completes += content.quartile100 || 0;
+      rollup.content_count += 1;
+    }
+    
+    // Calculate average VCR
+    for (const rollup of Array.from(rollupMap.values())) {
+      rollup.avg_vcr = rollup.impressions > 0 ? 
+        Math.round((rollup.completes / rollup.impressions) * 100 * 100) / 100 : 0;
+    }
+    
+    return Array.from(rollupMap.values()).sort((a, b) => b.impressions - a.impressions);
+  }
+
+  generateContentRollup(campaignId?: string): ContentRollup[] {
+    if (!this.initialized) {
+      return [];
+    }
+    
+    const filtered = campaignId ? 
+      this.campaign_content_raw.filter(c => c.campaign_id === campaignId) : 
+      this.campaign_content_raw;
+    
+    const rollupMap = new Map<string, ContentRollup>();
+    
+    for (const content of filtered) {
+      const contentKey = this.getContentKey(content.content_title);
+      const key = `${content.campaign_id}-${contentKey}-${content.content_network_name}`;
+      if (!rollupMap.has(key)) {
+        rollupMap.set(key, {
+          campaign_id: content.campaign_id,
+          content_key: contentKey,
+          content_title: content.content_title,
+          content_network_name: content.content_network_name,
+          impressions: 0,
+          completes: 0,
+          avg_vcr: 0
+        });
+      }
+      
+      const rollup = rollupMap.get(key)!;
+      rollup.impressions += content.impression || 0;
+      rollup.completes += content.quartile100 || 0;
+    }
+    
+    // Calculate average VCR
+    for (const rollup of Array.from(rollupMap.values())) {
+      rollup.avg_vcr = rollup.impressions > 0 ? 
+        Math.round((rollup.completes / rollup.impressions) * 100 * 100) / 100 : 0;
+    }
+    
+    return Array.from(rollupMap.values()).sort((a, b) => b.impressions - a.impressions);
+  }
+
+  // Utility methods
+  private generateCampaignId(campaignName: string): string {
+    const slug = campaignName
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, '');
+    const suffix = Math.random().toString(36).substring(2, 8);
+    return `${slug}-${suffix}`;
+  }
+
+  private generateUploadId(): string {
+    return `upload-${Date.now()}-${Math.random().toString(36).substring(2, 8)}`;
+  }
+
+  private getContentKey(contentTitle: string): string {
+    const contentTitleCanon = contentTitle.toLowerCase().trim().replace(/[^a-z0-9 ]/g, '');
+    const alias = this.content_aliases.find(a => a.content_title_canon === contentTitleCanon);
+    return alias?.content_key || contentTitleCanon;
+  }
+
+  private getGenreCanon(rawGenre: string): string {
+    const genreMap = this.genre_map.find(g => g.raw_genre === rawGenre);
+    return genreMap?.genre_canon || 'Unknown';
+  }
+
+  // Statistics
+  getCampaignStats(campaignId: string) {
+    if (!this.initialized) {
+      return {
+        totalImpressions: 0,
+        totalCompletes: 0,
+        overallVcr: 0,
+        mappedGenres: 0,
+        totalGenres: 0,
+        mappedPercentage: 0
+      };
+    }
+    
+    const filtered = this.campaign_content_raw.filter(c => c.campaign_id === campaignId);
+    const totalImpressions = filtered.reduce((sum, c) => sum + (c.impression || 0), 0);
+    const totalCompletes = filtered.reduce((sum, c) => sum + (c.quartile100 || 0), 0);
+    const overallVcr = totalImpressions > 0 ? 
+      Math.round((totalCompletes / totalImpressions) * 100 * 100) / 100 : 0;
+    const mappedGenres = new Set(filtered.map(c => this.getGenreCanon(c.content_network_name))).size;
+    const totalGenres = filtered.length;
+    const mappedPercentage = totalGenres > 0 ? 
+      Math.round((mappedGenres / totalGenres) * 100) : 0;
+    
+    return {
+      totalImpressions,
+      totalCompletes,
+      overallVcr,
+      mappedGenres,
+      totalGenres,
+      mappedPercentage
+    };
+  }
+
+  // Database operations (stubs for compatibility)
+  async run(query: string, params: any[] = []): Promise<void> {
+    if (!this.initialized) {
+      console.log('Database not ready, query ignored:', query);
+      return;
+    }
+    console.log('Executing query:', query, 'with params:', params);
+  }
+
+  async all(query: string, params: any[] = []): Promise<any[]> {
+    if (!this.initialized) {
+      console.log('Database not ready, query ignored:', query);
+      return [];
+    }
+    console.log('Executing query:', query, 'with params:', params);
+    return [];
+  }
+
+  async exec(query: string): Promise<void> {
+    if (!this.initialized) {
+      console.log('Database not ready, query ignored:', query);
+      return;
+    }
+    console.log('Executing query:', query);
+  }
+
+  async close(): Promise<void> {
+    this.campaigns = [];
+    this.campaign_uploads = [];
+    this.campaign_content_raw = [];
+    this.content_aliases = [];
+    this.genre_map = [];
+    this.initialized = false;
+  }
+}
+
+// Create and export a single instance
+export const db = new InMemoryDatabase();

@@ -1,0 +1,287 @@
+'use client';
+
+import { useState, useEffect } from 'react';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import Link from 'next/link';
+import { BarChart3, TrendingUp, Eye, Calendar, Upload, BarChart, Tag, Film } from 'lucide-react';
+
+interface Campaign {
+  campaign_id: string;
+  name: string;
+  created_at: string;
+}
+
+interface DashboardStats {
+  totalCampaigns: number;
+  totalImpressions: number;
+  totalCompletes: number;
+  overallVCR: number;
+  recentCampaigns: Campaign[];
+}
+
+export default function HomePage() {
+  const [stats, setStats] = useState<DashboardStats>({
+    totalCampaigns: 0,
+    totalImpressions: 0,
+    totalCompletes: 0,
+    overallVCR: 0,
+    recentCampaigns: []
+  });
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    fetchDashboardStats();
+  }, []);
+
+  const fetchDashboardStats = async () => {
+    try {
+      setIsLoading(true);
+      
+      // Fetch campaigns
+      const campaignsResponse = await fetch('/api/campaigns');
+      const campaignsData = await campaignsResponse.json();
+      
+      if (campaignsData.success) {
+        const campaigns = campaignsData.campaigns;
+        const totalCampaigns = campaigns.length;
+        
+        // Get recent campaigns (last 5)
+        const recentCampaigns = campaigns
+          .sort((a: Campaign, b: Campaign) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+          .slice(0, 5);
+        
+        // Calculate totals from all campaigns
+        let totalImpressions = 0;
+        let totalCompletes = 0;
+        
+        // Fetch rollup data for each campaign to get totals
+        for (const campaign of campaigns) {
+          try {
+            const appResponse = await fetch(`/api/campaigns/${campaign.campaign_id}/rollup/app`);
+            const appData = await appResponse.json();
+            
+            if (appData.success && appData.rollup) {
+              for (const rollup of appData.rollup) {
+                totalImpressions += rollup.impressions || 0;
+                totalCompletes += rollup.completes || 0;
+              }
+            }
+          } catch (error) {
+            console.error(`Failed to fetch data for campaign ${campaign.campaign_id}:`, error);
+          }
+        }
+        
+        const overallVCR = totalImpressions > 0 ? 
+          Math.round((totalCompletes / totalImpressions) * 100 * 100) / 100 : 0;
+        
+        setStats({
+          totalCampaigns,
+          totalImpressions,
+          totalCompletes,
+          overallVCR,
+          recentCampaigns
+        });
+      }
+    } catch (error) {
+      console.error('Failed to fetch dashboard stats:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString();
+  };
+
+  return (
+    <div className="space-y-6">
+      <div>
+        <h1 className="text-3xl font-bold tracking-tight">CTV Rollup Dashboard</h1>
+        <p className="text-muted-foreground">
+          Ingest, normalize, and analyze CTV delivery logs with deduplication and rollup reporting.
+        </p>
+      </div>
+
+      {/* Quick Stats Cards */}
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Total Campaigns</CardTitle>
+            <Calendar className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">
+              {isLoading ? '...' : stats.totalCampaigns.toLocaleString()}
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Active campaigns
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Total Impressions</CardTitle>
+            <BarChart3 className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">
+              {isLoading ? '...' : stats.totalImpressions.toLocaleString()}
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Across all campaigns
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Total Completes</CardTitle>
+            <TrendingUp className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">
+              {isLoading ? '...' : stats.totalCompletes.toLocaleString()}
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Video completions
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Overall VCR</CardTitle>
+            <Eye className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">
+              {isLoading ? '...' : `${stats.overallVCR}%`}
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Video completion rate
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Action Cards */}
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+        <Card>
+          <CardHeader>
+            <CardTitle>Manage Campaigns</CardTitle>
+            <CardDescription>
+              Upload new CSV files and manage existing campaigns
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Link href="/campaigns">
+              <Button className="w-full">
+                <Upload className="w-4 h-4 mr-2" />
+                Go to Campaigns
+              </Button>
+            </Link>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Normalize Data</CardTitle>
+            <CardDescription>
+              Map bundles, genres, and content for consistent analysis
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Link href="/normalize">
+              <Button className="w-full">
+                <Tag className="w-4 h-4 mr-2" />
+                Manage Mappings
+              </Button>
+            </Link>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>View Reports</CardTitle>
+            <CardDescription>
+              Analyze performance by app, genre, and content
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Link href="/campaigns">
+              <Button className="w-full">
+                <BarChart className="w-4 h-4 mr-2" />
+                View Campaigns
+              </Button>
+            </Link>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Recent Campaigns */}
+      <div className="grid gap-4 md:grid-cols-2">
+        <Card>
+          <CardHeader>
+            <CardTitle>Recent Campaigns</CardTitle>
+            <CardDescription>
+              Latest campaigns added to the system
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {isLoading ? (
+              <div className="text-center py-4 text-muted-foreground">
+                Loading campaigns...
+              </div>
+            ) : stats.recentCampaigns.length > 0 ? (
+              stats.recentCampaigns.map((campaign) => (
+                <div key={campaign.campaign_id} className="flex justify-between items-center p-3 rounded-lg border">
+                  <div>
+                    <p className="font-medium">{campaign.name}</p>
+                    <p className="text-sm text-muted-foreground">
+                      Created {formatDate(campaign.created_at)}
+                    </p>
+                  </div>
+                  <Link href={`/campaigns/${campaign.campaign_id}/reports`}>
+                    <Button variant="outline" size="sm">
+                      View Reports
+                    </Button>
+                  </Link>
+                </div>
+              ))
+            ) : (
+              <div className="text-center py-4 text-muted-foreground">
+                No campaigns yet. Upload your first CSV file to get started!
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>System Features</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            <div className="flex items-center space-x-2">
+              <Badge variant="secondary">CSV/Parquet Import</Badge>
+            </div>
+            <div className="flex items-center space-x-2">
+              <Badge variant="secondary">Smart Deduplication</Badge>
+            </div>
+            <div className="flex items-center space-x-2">
+              <Badge variant="secondary">Multi-tier Rollups</Badge>
+            </div>
+            <div className="flex items-center space-x-2">
+              <Badge variant="secondary">Export to CSV</Badge>
+            </div>
+            <div className="flex items-center space-x-2">
+              <Badge variant="secondary">Campaign Management</Badge>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    </div>
+  );
+}
