@@ -113,7 +113,7 @@ class InMemoryDatabase {
       campaign_id,
       campaign_name: campaignName,
       created_at: new Date()
-    };
+    }; return typedCampaign as Campaign;
     global.__db_campaigns.push(campaign);
     console.log(`Created campaign: ${campaignName} with ID: ${campaign_id}`);
     return campaign;
@@ -124,7 +124,7 @@ class InMemoryDatabase {
       return [];
     }
     console.log(`Returning ${global.__db_campaigns.length} campaigns`);
-    return global.__db_campaigns;
+    const campaigns = global.__db_campaigns.map(campaign => ({ campaign_id: campaign.campaign_id, campaign_name: campaign.campaign_name, created_at: campaign.created_at })); return campaigns as Campaign[];
   }
 
   async getCampaign(campaignId: string): Promise<Campaign | null> {
@@ -150,7 +150,7 @@ class InMemoryDatabase {
       filename,
       stored_path: storedPath,
       uploaded_at: new Date()
-    };
+    }; return typedCampaign as Campaign;
     global.__db_campaign_uploads.push(upload);
     console.log(`Created upload for campaign ${campaignId}: ${filename}`);
     return upload;
@@ -271,7 +271,7 @@ class InMemoryDatabase {
         completes: otherNetworks.reduce((sum, n) => sum + n.completes, 0),
         avg_vcr: 0,
         content_count: otherNetworks.reduce((sum, n) => sum + n.content_count, 0)
-      };
+      }; return typedCampaign as Campaign;
       
       // Calculate VCR for "Other" category
       otherRollup.avg_vcr = otherRollup.impressions > 0 ? 
@@ -398,14 +398,14 @@ class InMemoryDatabase {
   // Statistics
   getCampaignStats(campaignId: string) {
     if (!global.__db_initialized) {
-      return {
+      const typedCampaign = {
         totalImpressions: 0,
         totalCompletes: 0,
         overallVcr: 0,
         mappedGenres: 0,
         totalGenres: 0,
         mappedPercentage: 0
-      };
+      }; return typedCampaign as Campaign;
     }
     
     const filtered = global.__db_campaign_content_raw.filter(c => c.campaign_id === campaignId);
@@ -418,14 +418,14 @@ class InMemoryDatabase {
     const mappedPercentage = totalGenres > 0 ? 
       Math.round((mappedGenres / totalGenres) * 100) : 0;
     
-    return {
+    const typedCampaign = {
       totalImpressions,
       totalCompletes,
       overallVcr,
       mappedGenres,
       totalGenres,
       mappedPercentage
-    };
+    }; return typedCampaign as Campaign;
   }
 
   // Database operations (stubs for compatibility)
