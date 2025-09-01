@@ -134,6 +134,26 @@ class InMemoryDatabase {
     return global.__db_campaigns.find(c => c.campaign_id === campaignId) || null;
   }
 
+  async deleteCampaign(campaignId: string): Promise<void> {
+    if (!global.__db_initialized) {
+      throw new Error('Database not yet initialized');
+    }
+    
+    // Remove campaign from campaigns array
+    const campaignIndex = global.__db_campaigns.findIndex(c => c.campaign_id === campaignId);
+    if (campaignIndex >= 0) {
+      global.__db_campaigns.splice(campaignIndex, 1);
+    }
+    
+    // Remove related uploads
+    global.__db_campaign_uploads = global.__db_campaign_uploads.filter(u => u.campaign_id !== campaignId);
+    
+    // Remove related content
+    global.__db_campaign_content_raw = global.__db_campaign_content_raw.filter(c => c.campaign_id !== campaignId);
+    
+    console.log(`Deleted campaign ${campaignId} and all related data`);
+  }
+
   // Upload management
   async createCampaignUpload(
     campaignId: string, 

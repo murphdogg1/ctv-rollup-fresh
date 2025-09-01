@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { Upload, Plus, Calendar, BarChart3 } from 'lucide-react';
+import { Upload, Plus, Calendar, BarChart3, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface Campaign {
@@ -21,6 +21,8 @@ export default function CampaignsPage() {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [campaignName, setCampaignName] = useState('');
   const [isLoading, setIsLoading] = useState(true);
+  const [campaignToDelete, setCampaignToDelete] = useState<Campaign | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   useEffect(() => {
     fetchCampaigns();
@@ -94,6 +96,40 @@ export default function CampaignsPage() {
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString();
+  };
+
+  const handleDeleteCampaign = async (campaign: Campaign) => {
+    setCampaignToDelete(campaign);
+  };
+
+  const confirmDelete = async () => {
+    if (!campaignToDelete) return;
+
+    setIsDeleting(true);
+    try {
+      const response = await fetch(`/api/campaigns?campaignId=${campaignToDelete.campaign_id}`, {
+        method: 'DELETE',
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        toast.success(`Campaign "${campaignToDelete.campaign_name}" deleted successfully!`);
+        setCampaignToDelete(null);
+        fetchCampaigns(); // Refresh the list
+      } else {
+        toast.error(result.error || 'Delete failed');
+      }
+    } catch (error) {
+      console.error('Delete error:', error);
+      toast.error('Delete failed');
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  const cancelDelete = () => {
+    setCampaignToDelete(null);
   };
 
   return (
@@ -218,6 +254,14 @@ export default function CampaignsPage() {
                         View Reports
                       </a>
                     </Button>
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      onClick={() => handleDeleteCampaign(campaign)}
+                      className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </Button>
                   </div>
                 </div>
               </CardContent>
@@ -225,6 +269,34 @@ export default function CampaignsPage() {
           ))
         )}
       </div>
+
+      {/* Delete Confirmation Dialog */}
+      {campaignToDelete && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+            <h3 className="text-lg font-semibold mb-4">Delete Campaign</h3>
+            <p className="text-gray-600 mb-6">
+              Are you sure you want to delete "{campaignToDelete.campaign_name}"? This action cannot be undone and will remove all associated data.
+            </p>
+            <div className="flex gap-3 justify-end">
+              <Button 
+                variant="outline" 
+                onClick={cancelDelete}
+                disabled={isDeleting}
+              >
+                Cancel
+              </Button>
+              <Button 
+                variant="destructive" 
+                onClick={confirmDelete}
+                disabled={isDeleting}
+              >
+                {isDeleting ? 'Deleting...' : 'Delete Campaign'}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

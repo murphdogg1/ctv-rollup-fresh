@@ -93,6 +93,51 @@ export class DatabaseService {
     }
   }
 
+  static async deleteCampaign(campaignId: string): Promise<void> {
+    try {
+      // Check if we should use local database
+      if (process.env.DB_ENGINE === 'local') {
+        await db.deleteCampaign(campaignId)
+        return
+      }
+      
+      const supabase = createServiceClient()
+      
+      // Delete related data first (due to foreign key constraints)
+      // Delete content data
+      const { error: contentError } = await supabase
+        .from('campaign_content_raw')
+        .delete()
+        .eq('campaign_id', campaignId)
+      
+      if (contentError) {
+        console.warn('Failed to delete content data:', contentError)
+      }
+      
+      // Delete uploads
+      const { error: uploadError } = await supabase
+        .from('campaign_uploads')
+        .delete()
+        .eq('campaign_id', campaignId)
+      
+      if (uploadError) {
+        console.warn('Failed to delete uploads:', uploadError)
+      }
+      
+      // Finally delete the campaign
+      const { error: campaignError } = await supabase
+        .from('campaigns')
+        .delete()
+        .eq('campaign_id', campaignId)
+      
+      if (campaignError) {
+        throw new Error(`Failed to delete campaign: ${campaignError.message}`)
+      }
+    } catch (error) {
+      throw new Error(`Database service not available: ${error}`)
+    }
+  }
+
   // Campaign Uploads
   static async createCampaignUpload(
     campaignId: string, 

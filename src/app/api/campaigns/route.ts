@@ -44,3 +44,30 @@ export async function POST(request: NextRequest) {
     )
   }
 }
+
+export async function DELETE(request: NextRequest) {
+  try {
+    const { searchParams } = new URL(request.url)
+    const campaignId = searchParams.get('campaignId')
+    
+    if (!campaignId) {
+      return NextResponse.json(
+        { success: false, error: 'Campaign ID is required' },
+        { status: 400 }
+      )
+    }
+    
+    await DatabaseService.deleteCampaign(campaignId)
+    
+    return NextResponse.json({
+      success: true,
+      message: 'Campaign deleted successfully'
+    })
+  } catch (error) {
+    console.error('Failed to delete campaign:', error)
+    return NextResponse.json(
+      { success: false, error: 'Failed to delete campaign' },
+      { status: 500 }
+    )
+  }
+}
