@@ -7,10 +7,7 @@ import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import { BarChart3, TrendingUp, Eye, Calendar, Upload, BarChart, Tag, Film } from 'lucide-react';
 
-// Force dynamic rendering and disable static generation completely
-export const dynamic = 'force-dynamic';
-export const revalidate = false;
-export const fetchCache = 'force-no-store';
+// Client-side rendering - no static generation
 
 interface Campaign {
   campaign_id: string;

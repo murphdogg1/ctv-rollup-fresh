@@ -1,0 +1,1 @@
+{"success":false,"error":"Supabase environment variables not configured","envCheck":{"hasUrl":false,"hasAnonKey":false,"hasServiceKey":false,"dbEngine":"local"},"step":"client_creation_failed"}
