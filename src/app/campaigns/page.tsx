@@ -10,7 +10,7 @@ import { toast } from 'sonner';
 
 interface Campaign {
   campaign_id: string;
-  name: string;
+  campaign_name: string;
   created_at: string;
 }
 
@@ -197,7 +197,7 @@ export default function CampaignsPage() {
                   <div className="flex-1">
                     <div className="flex items-center gap-3 mb-2">
                       <div className="flex items-center gap-3 mb-2">
-                        <h3 className="text-xl font-semibold">{campaign.name}</h3>
+                        <h3 className="text-xl font-semibold">{campaign.campaign_name}</h3>
                         <Badge variant="secondary">Active</Badge>
                       </div>
                       <div className="flex items-center gap-4 text-sm text-muted-foreground">

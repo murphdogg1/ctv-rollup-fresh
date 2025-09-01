@@ -9,7 +9,7 @@ import { BarChart3, TrendingUp, Eye, Calendar, Upload, BarChart, Tag, Film } fro
 
 interface Campaign {
   campaign_id: string;
-  name: string;
+  campaign_name: string;
   created_at: string;
 }
 
@@ -257,7 +257,7 @@ export default function DashboardClient() {
               stats.recentCampaigns.map((campaign) => (
                 <div key={campaign.campaign_id} className="flex justify-between items-center p-3 rounded-lg border">
                   <div>
-                    <p className="font-medium">{campaign.name}</p>
+                    <p className="font-medium">{campaign.campaign_name}</p>
                     <p className="text-sm text-muted-foreground">
                       Created {formatDate(campaign.created_at)}
                     </p>
