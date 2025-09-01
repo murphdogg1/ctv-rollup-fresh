@@ -255,6 +255,30 @@ export class DatabaseService {
   // Utility Methods
   static async getRowCounts() {
     try {
+      // Check if we should use local database
+      if (process.env.DB_ENGINE === 'local') {
+        const campaigns = await this.getCampaigns()
+        const content = await this.getContentData()
+        
+        // For local DB, we'll count uploads by getting all campaigns and their uploads
+        let totalUploads = 0
+        for (const campaign of campaigns) {
+          try {
+            const uploads = await db.getCampaignUploads(campaign.campaign_id)
+            totalUploads += uploads.length
+          } catch (error) {
+            console.warn(`Failed to get uploads for campaign ${campaign.campaign_id}:`, error)
+          }
+        }
+        
+        return {
+          campaigns: campaigns.length,
+          campaign_uploads: totalUploads,
+          content_aliases: content.length,
+          genre_map: 0 // Local DB doesn't have genre_map table
+        }
+      }
+      
       const supabase = createServiceClient()
       const [campaigns, uploads, content, aliases, genres] = await Promise.all([
         this.getCampaigns(),
