@@ -282,10 +282,10 @@ export class DatabaseService {
       const supabase = createServiceClient()
       const [campaigns, uploads, content, aliases, genres] = await Promise.all([
         this.getCampaigns(),
-        supabase.from('campaign_uploads').select('id', { count: 'exact' }),
+        supabase.from('campaign_uploads').select('upload_id', { count: 'exact' }),
         this.getContentData(),
-        supabase.from('content_aliases').select('id', { count: 'exact' }),
-        supabase.from('genre_map').select('id', { count: 'exact' })
+        supabase.from('content_aliases').select('content_title_canon', { count: 'exact' }),
+        supabase.from('genre_map').select('raw_genre', { count: 'exact' })
       ])
 
       return {
