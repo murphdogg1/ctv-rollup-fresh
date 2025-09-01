@@ -7,6 +7,11 @@ import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import { BarChart3, TrendingUp, Eye, Calendar, Upload, BarChart, Tag, Film } from 'lucide-react';
 
+// Force dynamic rendering and disable static generation completely
+export const dynamic = 'force-dynamic';
+export const revalidate = false;
+export const fetchCache = 'force-no-store';
+
 interface Campaign {
   campaign_id: string;
   name: string;
@@ -22,6 +27,7 @@ interface DashboardStats {
 }
 
 export default function HomePage() {
+  const [isClient, setIsClient] = useState(false);
   const [stats, setStats] = useState<DashboardStats>({
     totalCampaigns: 0,
     totalImpressions: 0,
@@ -30,9 +36,25 @@ export default function HomePage() {
     recentCampaigns: []
   });
   const [isLoading, setIsLoading] = useState(true);
+  const [apiStatus, setApiStatus] = useState('Testing...');
 
   useEffect(() => {
-    fetchDashboardStats();
+    setIsClient(true);
+    console.log('HomePage: JavaScript is executing!');
+    
+    // Test API connection first
+    fetch('/api/campaigns')
+      .then(response => response.json())
+      .then(data => {
+        console.log('API call successful:', data);
+        setApiStatus(`Connected! Found ${data.campaigns?.length || 0} campaigns`);
+        fetchDashboardStats();
+      })
+      .catch(error => {
+        console.error('API call failed:', error);
+        setApiStatus(`Failed: ${error.message}`);
+        setIsLoading(false);
+      });
   }, []);
 
   const fetchDashboardStats = async () => {
@@ -95,6 +117,19 @@ export default function HomePage() {
     return new Date(dateString).toLocaleDateString();
   };
 
+  if (!isClient) {
+    return (
+      <div className="space-y-6">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">CTV Rollup Dashboard</h1>
+          <p className="text-muted-foreground">
+            Loading...
+          </p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       <div>
@@ -102,6 +137,15 @@ export default function HomePage() {
         <p className="text-muted-foreground">
           Ingest, normalize, and analyze CTV delivery logs with deduplication and rollup reporting.
         </p>
+        <div className="mt-2 text-xs text-green-600">
+          ✅ JavaScript is working! Client-side rendering active.
+        </div>
+        <div className="mt-1 text-xs text-blue-600">
+          API Status: {apiStatus}
+        </div>
+        <div className="mt-1 text-xs text-purple-600">
+          🚀 FRESH REPOSITORY - Connected to murphdogg1/ctv-rollup-fresh
+        </div>
       </div>
 
       {/* Quick Stats Cards */}
