@@ -317,71 +317,64 @@ class InMemoryDatabase {
       global.__db_campaign_content_raw.filter(c => (c.impression || 0) > 0);
     
     const rollupMap = new Map<string, AppRollup>();
+    // Accumulator for the "Other" bucket
+    const otherAccumulator: AppRollup = {
+      campaign_id: campaignId || 'unknown',
+      app_name: 'Other',
+      impressions: 0,
+      completes: 0,
+      avg_vcr: 0,
+      content_count: 0
+    };
     
     for (const content of filtered) {
-      // Get mapped network name (using aliases if available)
       const originalNetworkName = content.content_network_name || 'Unknown';
       const mappedNetworkName = this.getMappedNetworkName(originalNetworkName);
+      const isAliased = mappedNetworkName !== originalNetworkName;
+
+      // Rule: if NOT aliased and impressions < 50, bucket into "Other"
+      if (!isAliased && (content.impression || 0) < 50) {
+        otherAccumulator.impressions += content.impression || 0;
+        otherAccumulator.completes += content.quartile100 || 0;
+        otherAccumulator.content_count += 1;
+        continue;
+      }
+
       const normalizedNetworkName = mappedNetworkName.toLowerCase().trim();
-      
-      // Use normalized name as key to prevent case-sensitive duplicates
       const key = `${content.campaign_id}-${normalizedNetworkName}`;
-      
       if (!rollupMap.has(key)) {
         rollupMap.set(key, {
           campaign_id: content.campaign_id,
-          app_name: mappedNetworkName, // Use mapped name for display
+          app_name: mappedNetworkName,
           impressions: 0,
           completes: 0,
           avg_vcr: 0,
           content_count: 0
         });
       }
-      
       const rollup = rollupMap.get(key)!;
       rollup.impressions += content.impression || 0;
       rollup.completes += content.quartile100 || 0;
       rollup.content_count += 1;
     }
-    
+
     // Calculate average VCR for each network
     for (const rollup of Array.from(rollupMap.values())) {
-      rollup.avg_vcr = rollup.impressions > 0 ? 
+      rollup.avg_vcr = rollup.impressions > 0 ?
         Math.round((rollup.completes / rollup.impressions) * 100 * 100) / 100 : 0;
     }
-    
-    // Separate networks into significant (>=1000) and others (<1000)
-    const significantNetworks: AppRollup[] = [];
-    const otherNetworks: AppRollup[] = [];
-    
-    for (const rollup of Array.from(rollupMap.values())) {
-      if (rollup.impressions >= 1000) {
-        significantNetworks.push(rollup);
-      } else {
-        otherNetworks.push(rollup);
-      }
+
+    const results = Array.from(rollupMap.values());
+    // Add Other if it has any impressions
+    if (otherAccumulator.impressions > 0) {
+      otherAccumulator.avg_vcr = Math.round(
+        (otherAccumulator.completes / otherAccumulator.impressions) * 100 * 100
+      ) / 100;
+      results.push(otherAccumulator);
     }
-    
-    // Create "Other" category if there are low-performing networks
-    if (otherNetworks.length > 0) {
-      const otherRollup: AppRollup = {
-        campaign_id: campaignId || 'unknown',
-        app_name: 'Other',
-        impressions: otherNetworks.reduce((sum, n) => sum + n.impressions, 0),
-        completes: otherNetworks.reduce((sum, n) => sum + n.completes, 0),
-        avg_vcr: 0,
-        content_count: otherNetworks.reduce((sum, n) => sum + n.content_count, 0)
-      };
-      
-      // Calculate VCR for "Other" category
-      otherRollup.avg_vcr = otherRollup.impressions > 0 ? 
-        Math.round((otherRollup.completes / otherRollup.impressions) * 100 * 100) / 100 : 0;
-      
-      significantNetworks.push(otherRollup);
-    }
-    
+
     // Return sorted by impressions (highest first)
-    return significantNetworks.sort((a, b) => b.impressions - a.impressions);
+    return results.sort((a, b) => b.impressions - a.impressions);
   }
 
   generateGenreRollup(campaignId?: string): GenreRollup[] {

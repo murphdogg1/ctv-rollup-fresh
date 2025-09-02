@@ -364,19 +364,84 @@ export class DatabaseService {
         return rollup
       }
       
+      // Fetch raw content rows and compute rollup in Node so we can apply "Other" rule
       const supabase = createServiceClient()
       let query = supabase
-        .from('rr_rollup_app')
-        .select('*')
+        .from('campaign_content_raw')
+        .select('campaign_id, content_network_name, impression, quartile100')
 
       if (campaignId) {
         query = query.eq('campaign_id', campaignId)
       }
 
-      const { data, error } = await query.order('impressions', { ascending: false })
+      const { data, error } = await query
+      if (error) throw new Error(`Failed to fetch raw content for rollup: ${error.message}`)
 
-      if (error) throw new Error(`Failed to fetch app rollup: ${error.message}`)
-      return data || []
+      const rows = data || []
+
+      // Get aliases to know which are mapped
+      const aliases = await this.getContentNetworkAliases()
+      const aliasedNameSet = new Set<string>(
+        aliases.flatMap(a => a.network_names)
+      )
+
+      const rollupMap = new Map<string, AppRollup>()
+      const other: AppRollup = {
+        campaign_id: campaignId || 'unknown',
+        app_name: 'Other',
+        impressions: 0,
+        completes: 0,
+        avg_vcr: 0,
+        content_count: 0
+      }
+
+      for (const row of rows) {
+        const original = row.content_network_name || 'Unknown'
+        const isAliased = aliasedNameSet.has(original)
+        const impressions = row.impression || 0
+
+        if (!isAliased && impressions < 50) {
+          other.impressions += impressions
+          other.completes += row.quartile100 || 0
+          other.content_count += 1
+          continue
+        }
+
+        // Determine mapped name via RPC if available, else use original
+        let mapped = original
+        try {
+          const { data: mappedName } = await supabase
+            .rpc('get_mapped_network_name', { network_name: original })
+          mapped = mappedName || original
+        } catch {}
+
+        const key = `${row.campaign_id}-${mapped.toLowerCase().trim()}`
+        if (!rollupMap.has(key)) {
+          rollupMap.set(key, {
+            campaign_id: row.campaign_id,
+            app_name: mapped,
+            impressions: 0,
+            completes: 0,
+            avg_vcr: 0,
+            content_count: 0
+          })
+        }
+        const r = rollupMap.get(key)!
+        r.impressions += impressions
+        r.completes += row.quartile100 || 0
+        r.content_count += 1
+      }
+
+      if (other.impressions > 0) {
+        other.avg_vcr = other.impressions > 0 ? Math.round((other.completes / other.impressions) * 100 * 100) / 100 : 0
+        rollupMap.set(`${campaignId || 'unknown'}-other`, other)
+      }
+
+      const result = Array.from(rollupMap.values())
+      for (const r of result) {
+        r.avg_vcr = r.impressions > 0 ? Math.round((r.completes / r.impressions) * 100 * 100) / 100 : 0
+      }
+      return result.sort((a, b) => b.impressions - a.impressions)
     } catch (error) {
       console.warn('Database service not available:', error)
       return []
