@@ -242,8 +242,8 @@ class InMemoryDatabase {
     }
     
     const filtered = campaignId ? 
-      global.__db_campaign_content_raw.filter(c => c.campaign_id === campaignId) : 
-      global.__db_campaign_content_raw;
+      global.__db_campaign_content_raw.filter(c => c.campaign_id === campaignId && (c.impression || 0) > 0) : 
+      global.__db_campaign_content_raw.filter(c => (c.impression || 0) > 0);
     
     const rollupMap = new Map<string, AppRollup>();
     
@@ -317,8 +317,8 @@ class InMemoryDatabase {
     }
     
     const filtered = campaignId ? 
-      global.__db_campaign_content_raw.filter(c => c.campaign_id === campaignId) : 
-      global.__db_campaign_content_raw;
+      global.__db_campaign_content_raw.filter(c => c.campaign_id === campaignId && (c.impression || 0) > 0) : 
+      global.__db_campaign_content_raw.filter(c => (c.impression || 0) > 0);
     
     const rollupMap = new Map<string, GenreRollup>();
     
@@ -357,8 +357,8 @@ class InMemoryDatabase {
     }
     
     const filtered = campaignId ? 
-      global.__db_campaign_content_raw.filter(c => c.campaign_id === campaignId) : 
-      global.__db_campaign_content_raw;
+      global.__db_campaign_content_raw.filter(c => c.campaign_id === campaignId && (c.impression || 0) > 0) : 
+      global.__db_campaign_content_raw.filter(c => (c.impression || 0) > 0);
     
     const rollupMap = new Map<string, ContentRollup>();
     

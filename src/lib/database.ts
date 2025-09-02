@@ -372,7 +372,7 @@ export class DatabaseService {
       
       const supabase = createServiceClient()
       
-      // Get total content lines
+      // Get total content lines (including zero impressions for raw count)
       const { count: totalLines } = await supabase
         .from('campaign_content_raw')
         .select('*', { count: 'exact', head: true })
@@ -384,12 +384,13 @@ export class DatabaseService {
         .select('*', { count: 'exact', head: true })
         .eq('campaign_id', campaignId)
       
-      // For rollup lines, we'll count distinct content titles that have rollup data
-      // This gives us an approximation of how many unique content items were processed
+      // For rollup lines, count distinct content titles that have impressions > 0
+      // This gives us the count of content items that actually contributed to rollups
       const { data: rollupData } = await supabase
         .from('campaign_content_raw')
         .select('content_title')
         .eq('campaign_id', campaignId)
+        .gt('impression', 0)  // Only count rows with impressions > 0
       
       const uniqueContentTitles = new Set(rollupData?.map(item => item.content_title) || [])
       const rollupLines = uniqueContentTitles.size
