@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Treemap, Tooltip, ResponsiveContainer } from 'recharts';
 
 interface AppRollupItem {
   campaign_id: string;
@@ -45,9 +46,18 @@ export default function InventoryPage() {
     load();
   }, []);
 
-  // Simple treemap-like layout: blocks sized proportionally to impressions
+  // Aggregate small slices into "Other" and build data for Recharts
   const total = data.reduce((s, r) => s + (r.impressions || 0), 0);
-  const items = data.filter(d => d.impressions > 0).slice(0, 50); // limit for layout
+  const sorted = [...data].sort((a, b) => b.impressions - a.impressions);
+  const shown = sorted.filter(d => d.impressions > 0);
+  const cutoff = Math.max(0.01 * total, 1000); // 1% or 1000 imps min
+  const major = shown.filter(d => d.impressions >= cutoff);
+  const minor = shown.filter(d => d.impressions < cutoff);
+  const otherTotal = minor.reduce((s, r) => s + r.impressions, 0);
+  const chartData = [
+    ...major.map(m => ({ name: m.app_name, size: m.impressions })),
+    ...(otherTotal > 0 ? [{ name: 'Other', size: otherTotal }] : [])
+  ];
 
   return (
     <div className="container mx-auto py-8">
@@ -64,23 +74,51 @@ export default function InventoryPage() {
           ) : items.length === 0 ? (
             <div className="text-center py-16 text-muted-foreground">No data</div>
           ) : (
-            <div className="w-full h-[600px] grid grid-cols-6 gap-2">
-              {items.map((item, i) => {
-                const pct = total > 0 ? item.impressions / total : 0;
-                const area = Math.max(pct, 0.01); // minimum visual size
-                const height = Math.max(Math.round(area * 600), 24);
-                return (
-                  <div key={i} className="border rounded p-2 flex flex-col justify-between bg-white" style={{ height }}>
-                    <div className="text-sm font-semibold truncate" title={item.app_name}>{item.app_name}</div>
-                    <div className="text-xs text-muted-foreground">{item.impressions.toLocaleString()} imp</div>
-                  </div>
-                );
-              })}
+            <div className="w-full h-[600px]">
+              <ResponsiveContainer width="100%" height="100%">
+                <Treemap
+                  data={chartData}
+                  dataKey="size"
+                  nameKey="name"
+                  stroke="#fff"
+                  fill="#60a5fa"
+                  aspectRatio={4 / 3}
+                  content={<CustomTreemapContent />}
+                >
+                  <Tooltip content={({ payload }) => {
+                    if (!payload || payload.length === 0) return null;
+                    const p: any = payload[0].payload;
+                    return (
+                      <div className="rounded bg-white/90 shadow p-2 text-xs">
+                        <div className="font-medium">{p.name}</div>
+                        <div>{p.size.toLocaleString()} impressions</div>
+                      </div>
+                    );
+                  }} />
+                </Treemap>
+              </ResponsiveContainer>
             </div>
           )}
         </CardContent>
       </Card>
     </div>
+  );
+}
+
+function CustomTreemapContent(props: any) {
+  const { x, y, width, height, name } = props;
+  const labelVisible = width > 80 && height > 40;
+  const bg = name === 'Other' ? '#cbd5e1' : '#93c5fd';
+  const fg = '#0f172a';
+  return (
+    <g>
+      <rect x={x} y={y} width={width} height={height} style={{ fill: bg, stroke: '#fff' }} />
+      {labelVisible && (
+        <text x={x + 8} y={y + 20} fill={fg} fontSize={12} fontWeight={600}>
+          {name}
+        </text>
+      )}
+    </g>
   );
 }
 
