@@ -239,7 +239,6 @@ export class DatabaseService {
       // Check if we should use local database
       if (process.env.DB_ENGINE === 'local') {
         const rollup = await db.generateAppRollup(campaignId)
-        console.log(`getAppRollup LOCAL for ${campaignId}: total=${rollup.length}, zero_impressions=${rollup.filter(r => r.impressions === 0).length}`)
         return rollup
       }
       
@@ -255,12 +254,6 @@ export class DatabaseService {
       const { data, error } = await query.order('impressions', { ascending: false })
 
       if (error) throw new Error(`Failed to fetch app rollup: ${error.message}`)
-      
-      // Debug: log rollup stats
-      const totalCount = data?.length || 0
-      const zeroImpressionCount = data?.filter(r => r.impressions === 0).length || 0
-      console.log(`getAppRollup SUPABASE for ${campaignId}: total=${totalCount}, zero_impressions=${zeroImpressionCount}`)
-      
       return data || []
     } catch (error) {
       console.warn('Database service not available:', error)
