@@ -211,16 +211,16 @@ export default function DashboardClient() {
 
         <Card>
           <CardHeader>
-            <CardTitle>Normalize Data</CardTitle>
+            <CardTitle>Content Networks</CardTitle>
             <CardDescription>
-              Map bundles, genres, and content for consistent analysis
+              Manage content network aliases for cleaner rollups
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <Link href="/normalize">
+            <Link href="/content-networks">
               <Button className="w-full">
                 <Tag className="w-4 h-4 mr-2" />
-                Manage Mappings
+                Content Networks
               </Button>
             </Link>
           </CardContent>
