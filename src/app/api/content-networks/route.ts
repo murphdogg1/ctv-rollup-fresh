@@ -4,7 +4,7 @@ import { DatabaseService } from '@/lib/database'
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)
-    const campaignId = searchParams.get('campaignId')
+    const campaignId = searchParams.get('campaignId') || undefined
 
     // Get all unique content network names
     const networkNames = await DatabaseService.getContentNetworkNames(campaignId)
