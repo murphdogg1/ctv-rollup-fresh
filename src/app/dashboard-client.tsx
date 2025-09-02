@@ -228,16 +228,16 @@ export default function DashboardClient() {
 
         <Card>
           <CardHeader>
-            <CardTitle>View Reports</CardTitle>
+            <CardTitle>Inventory Composition</CardTitle>
             <CardDescription>
-              Analyze performance by app, genre, and content
+              Treemap of content networks by impressions
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <Link href="/campaigns">
+            <Link href="/inventory">
               <Button className="w-full">
                 <BarChart className="w-4 h-4 mr-2" />
-                View Campaigns
+                Inventory Composition
               </Button>
             </Link>
           </CardContent>
