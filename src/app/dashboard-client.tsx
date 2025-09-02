@@ -286,11 +286,14 @@ export default function DashboardClient() {
                         <Database className="w-3 h-3" />
                         <span>{campaign.stats.rollupLines.toLocaleString()} rolled up</span>
                       </div>
-                      {campaign.stats.totalLines > 0 && (
-                        <div className="text-muted-foreground">
-                          {Math.round((campaign.stats.rollupLines / campaign.stats.totalLines) * 100)}% efficiency
-                        </div>
-                      )}
+                      {campaign.stats.totalLines > 0 && (() => {
+                        const reductionPct = Math.round(((campaign.stats.totalLines - campaign.stats.rollupLines) / campaign.stats.totalLines) * 100);
+                        return (
+                          <div className="text-muted-foreground">
+                            {reductionPct}% efficiency
+                          </div>
+                        );
+                      })()}
                     </div>
                   )}
                 </div>

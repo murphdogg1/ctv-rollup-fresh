@@ -282,12 +282,12 @@ export default function CampaignsPage() {
                         <div className="mt-3">
                           <div className="flex justify-between text-xs text-muted-foreground mb-1">
                             <span>Rollup Efficiency</span>
-                            <span>{Math.round((campaign.stats.rollupLines / campaign.stats.totalLines) * 100)}%</span>
+                            <span>{Math.round(((campaign.stats.totalLines - campaign.stats.rollupLines) / campaign.stats.totalLines) * 100)}%</span>
                           </div>
                           <div className="w-full bg-gray-200 rounded-full h-2">
                             <div 
                               className="bg-green-500 h-2 rounded-full transition-all duration-300"
-                              style={{ width: `${Math.min((campaign.stats.rollupLines / campaign.stats.totalLines) * 100, 100)}%` }}
+                              style={{ width: `${Math.min(((campaign.stats.totalLines - campaign.stats.rollupLines) / campaign.stats.totalLines) * 100, 100)}%` }}
                             ></div>
                           </div>
                         </div>
