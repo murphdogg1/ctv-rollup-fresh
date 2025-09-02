@@ -124,15 +124,19 @@ function CustomTreemapContent(props: any) {
   const share = total > 0 ? Math.round((props.size / total) * 100) : 0;
   return (
     <g>
-      <rect x={x} y={y} width={width} height={height} style={{ fill: bg, stroke: '#fff' }} />
+      <rect x={x} y={y} width={width} height={height} style={{ fill: bg, stroke: '#e5e7eb', strokeOpacity: 0.6 }} />
       {labelVisible && (
         <>
-          <text x={x + 8} y={y + 18} fill={fg} fontSize={12} fontWeight={700}>
+          {/* translucent label band for readability */}
+          <rect x={x} y={y} width={width} height={28} style={{ fill: 'rgba(0,0,0,0.35)' }} />
+          <text x={x + 8} y={y + 18} fill="#ffffff" fontSize={12} fontWeight={700}>
             {name}
           </text>
-          <text x={x + 8} y={y + 34} fill={fg} fontSize={11}>
-            {share}%
-          </text>
+          {height > 44 && (
+            <text x={x + 8} y={y + 34} fill="#f1f5f9" fontSize={11}>
+              {share}%
+            </text>
+          )}
         </>
       )}
     </g>
