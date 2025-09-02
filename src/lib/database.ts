@@ -350,6 +350,65 @@ export class DatabaseService {
     }
   }
 
+  static async getCampaignStats(campaignId: string): Promise<{
+    totalLines: number;
+    rollupLines: number;
+    uploads: number;
+  }> {
+    try {
+      // Check if we should use local database
+      if (process.env.DB_ENGINE === 'local') {
+        const uploads = await db.getCampaignUploads(campaignId)
+        const content = await db.getCampaignContent(campaignId)
+        
+        // For local DB, rollup lines would be the same as content lines
+        // since we don't have separate rollup tables
+        return {
+          totalLines: content.length,
+          rollupLines: content.length,
+          uploads: uploads.length
+        }
+      }
+      
+      const supabase = createServiceClient()
+      
+      // Get total content lines
+      const { count: totalLines } = await supabase
+        .from('campaign_content_raw')
+        .select('*', { count: 'exact', head: true })
+        .eq('campaign_id', campaignId)
+      
+      // Get upload count
+      const { count: uploads } = await supabase
+        .from('campaign_uploads')
+        .select('*', { count: 'exact', head: true })
+        .eq('campaign_id', campaignId)
+      
+      // For rollup lines, we'll count distinct content titles that have rollup data
+      // This gives us an approximation of how many unique content items were processed
+      const { data: rollupData } = await supabase
+        .from('campaign_content_raw')
+        .select('content_title')
+        .eq('campaign_id', campaignId)
+      
+      const uniqueContentTitles = new Set(rollupData?.map(item => item.content_title) || [])
+      const rollupLines = uniqueContentTitles.size
+      
+      return {
+        totalLines: totalLines || 0,
+        rollupLines,
+        uploads: uploads || 0
+      }
+    } catch (error) {
+      console.warn('Failed to get campaign stats:', error)
+      return {
+        totalLines: 0,
+        rollupLines: 0,
+        uploads: 0
+      }
+    }
+  }
+
   private static generateUploadId(): string {
     return `upload-${Date.now()}-${Math.random().toString(36).substring(2, 8)}`;
   }

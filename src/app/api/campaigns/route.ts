@@ -5,9 +5,32 @@ export async function GET() {
   try {
     const campaigns = await DatabaseService.getCampaigns()
     
+    // Get statistics for each campaign
+    const campaignsWithStats = await Promise.all(
+      campaigns.map(async (campaign) => {
+        try {
+          const stats = await DatabaseService.getCampaignStats(campaign.campaign_id)
+          return {
+            ...campaign,
+            stats
+          }
+        } catch (error) {
+          console.warn(`Failed to get stats for campaign ${campaign.campaign_id}:`, error)
+          return {
+            ...campaign,
+            stats: {
+              totalLines: 0,
+              rollupLines: 0,
+              uploads: 0
+            }
+          }
+        }
+      })
+    )
+    
     return NextResponse.json({
       success: true,
-      campaigns
+      campaigns: campaignsWithStats
     })
   } catch (error) {
     console.error('Failed to fetch campaigns:', error)

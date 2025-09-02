@@ -5,13 +5,18 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { Upload, Plus, Calendar, BarChart3, Trash2 } from 'lucide-react';
+import { Upload, Plus, Calendar, BarChart3, Trash2, FileText, Database, TrendingUp } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface Campaign {
   campaign_id: string;
   campaign_name: string;
   created_at: string;
+  stats: {
+    totalLines: number;
+    rollupLines: number;
+    uploads: number;
+  };
 }
 
 export default function CampaignsPage() {
@@ -246,6 +251,47 @@ export default function CampaignsPage() {
                           Reports available
                         </div>
                       </div>
+                      
+                      {/* Statistics */}
+                      <div className="mt-3 grid grid-cols-3 gap-4 text-sm">
+                        <div className="flex items-center gap-2 p-2 bg-blue-50 rounded-lg">
+                          <FileText className="w-4 h-4 text-blue-600" />
+                          <div>
+                            <div className="font-medium text-blue-900">{campaign.stats.totalLines.toLocaleString()}</div>
+                            <div className="text-xs text-blue-600">Total Lines</div>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2 p-2 bg-green-50 rounded-lg">
+                          <Database className="w-4 h-4 text-green-600" />
+                          <div>
+                            <div className="font-medium text-green-900">{campaign.stats.rollupLines.toLocaleString()}</div>
+                            <div className="text-xs text-green-600">Rolled Up</div>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2 p-2 bg-purple-50 rounded-lg">
+                          <TrendingUp className="w-4 h-4 text-purple-600" />
+                          <div>
+                            <div className="font-medium text-purple-900">{campaign.stats.uploads}</div>
+                            <div className="text-xs text-purple-600">Uploads</div>
+                          </div>
+                        </div>
+                      </div>
+                      
+                      {/* Progress bar showing rollup efficiency */}
+                      {campaign.stats.totalLines > 0 && (
+                        <div className="mt-3">
+                          <div className="flex justify-between text-xs text-muted-foreground mb-1">
+                            <span>Rollup Efficiency</span>
+                            <span>{Math.round((campaign.stats.rollupLines / campaign.stats.totalLines) * 100)}%</span>
+                          </div>
+                          <div className="w-full bg-gray-200 rounded-full h-2">
+                            <div 
+                              className="bg-green-500 h-2 rounded-full transition-all duration-300"
+                              style={{ width: `${Math.min((campaign.stats.rollupLines / campaign.stats.totalLines) * 100, 100)}%` }}
+                            ></div>
+                          </div>
+                        </div>
+                      )}
                     </div>
                   </div>
                   <div className="flex gap-2">

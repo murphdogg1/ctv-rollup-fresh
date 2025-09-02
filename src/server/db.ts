@@ -193,6 +193,13 @@ class InMemoryDatabase {
     return content.length;
   }
 
+  async getCampaignContent(campaignId: string): Promise<CampaignContentRaw[]> {
+    if (!global.__db_initialized) {
+      return [];
+    }
+    return global.__db_campaign_content_raw.filter(c => c.campaign_id === campaignId);
+  }
+
   // Content normalization
   async upsertContentAlias(contentTitleCanon: string, contentKey: string): Promise<void> {
     if (!global.__db_initialized) {

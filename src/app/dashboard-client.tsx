@@ -5,12 +5,17 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
-import { BarChart3, TrendingUp, Eye, Calendar, Upload, BarChart, Tag, Film } from 'lucide-react';
+import { BarChart3, TrendingUp, Eye, Calendar, Upload, BarChart, Tag, Film, FileText, Database } from 'lucide-react';
 
 interface Campaign {
   campaign_id: string;
   campaign_name: string;
   created_at: string;
+  stats?: {
+    totalLines: number;
+    rollupLines: number;
+    uploads: number;
+  };
 }
 
 interface DashboardStats {
@@ -255,18 +260,39 @@ export default function DashboardClient() {
               </div>
             ) : stats.recentCampaigns.length > 0 ? (
               stats.recentCampaigns.map((campaign) => (
-                <div key={campaign.campaign_id} className="flex justify-between items-center p-3 rounded-lg border">
-                  <div>
-                    <p className="font-medium">{campaign.campaign_name}</p>
-                    <p className="text-sm text-muted-foreground">
-                      Created {formatDate(campaign.created_at)}
-                    </p>
+                <div key={campaign.campaign_id} className="p-3 rounded-lg border">
+                  <div className="flex justify-between items-start mb-2">
+                    <div>
+                      <p className="font-medium">{campaign.campaign_name}</p>
+                      <p className="text-sm text-muted-foreground">
+                        Created {formatDate(campaign.created_at)}
+                      </p>
+                    </div>
+                    <Link href={`/campaigns/${campaign.campaign_id}/reports`}>
+                      <Button variant="outline" size="sm">
+                        View Reports
+                      </Button>
+                    </Link>
                   </div>
-                  <Link href={`/campaigns/${campaign.campaign_id}/reports`}>
-                    <Button variant="outline" size="sm">
-                      View Reports
-                    </Button>
-                  </Link>
+                  
+                  {/* Statistics for recent campaigns */}
+                  {campaign.stats && (
+                    <div className="flex gap-3 text-xs">
+                      <div className="flex items-center gap-1 text-blue-600">
+                        <FileText className="w-3 h-3" />
+                        <span>{campaign.stats.totalLines.toLocaleString()} lines</span>
+                      </div>
+                      <div className="flex items-center gap-1 text-green-600">
+                        <Database className="w-3 h-3" />
+                        <span>{campaign.stats.rollupLines.toLocaleString()} rolled up</span>
+                      </div>
+                      {campaign.stats.totalLines > 0 && (
+                        <div className="text-muted-foreground">
+                          {Math.round((campaign.stats.rollupLines / campaign.stats.totalLines) * 100)}% efficiency
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
               ))
             ) : (
