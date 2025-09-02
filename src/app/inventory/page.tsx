@@ -71,7 +71,7 @@ export default function InventoryPage() {
             <div className="text-center py-16 text-muted-foreground">Loading...</div>
           ) : error ? (
             <div className="text-center py-16 text-red-600">{error}</div>
-          ) : items.length === 0 ? (
+          ) : chartData.length === 0 ? (
             <div className="text-center py-16 text-muted-foreground">No data</div>
           ) : (
             <div className="w-full h-[600px]">
