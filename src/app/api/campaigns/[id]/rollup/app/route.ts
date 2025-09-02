@@ -10,7 +10,7 @@ export async function GET(
     const rollup = await DatabaseService.getAppRollup(campaignId)
     const campaign = await DatabaseService.getCampaignById(campaignId)
 
-    // Debug: log rollup stats
+    // Debug: log rollup stats (cache refresh v2)
     const totalCount = rollup.length
     const zeroImpressionCount = rollup.filter(r => r.impressions === 0).length
     console.log(`Rollup stats for ${campaignId}: total=${totalCount}, zero_impressions=${zeroImpressionCount}`)
