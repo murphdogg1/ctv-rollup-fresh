@@ -21,10 +21,18 @@ export default function InventoryPage() {
     const load = async () => {
       try {
         setLoading(true);
-        const res = await fetch('/api/campaigns/test-campaign-debug-qbz75f/rollup/app');
+        const res = await fetch('/api/inventory');
         const json = await res.json();
         if (json.success) {
-          setData(json.rollup);
+          const items = (json.items || []).map((i: any) => ({
+            campaign_id: 'all',
+            app_name: i.app_name,
+            impressions: i.impressions,
+            completes: i.completes,
+            avg_vcr: i.impressions > 0 ? Math.round((i.completes / i.impressions) * 100 * 100) / 100 : 0,
+            content_count: i.content_count
+          }))
+          setData(items);
         } else {
           setError('Failed to load inventory composition');
         }
