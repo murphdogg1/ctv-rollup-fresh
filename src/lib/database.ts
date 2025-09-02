@@ -369,6 +369,7 @@ export class DatabaseService {
       let query = supabase
         .from('campaign_content_raw')
         .select('campaign_id, content_network_name, impression, quartile100')
+        .gt('impression', 0) // Only include rows with impressions
 
       if (campaignId) {
         query = query.eq('campaign_id', campaignId)
