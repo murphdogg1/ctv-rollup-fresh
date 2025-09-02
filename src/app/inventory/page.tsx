@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Treemap, Tooltip, ResponsiveContainer } from 'recharts';
 
@@ -47,17 +47,23 @@ export default function InventoryPage() {
   }, []);
 
   // Aggregate small slices into "Other" and build data for Recharts
-  const total = data.reduce((s, r) => s + (r.impressions || 0), 0);
-  const sorted = [...data].sort((a, b) => b.impressions - a.impressions);
-  const shown = sorted.filter(d => d.impressions > 0);
-  const cutoff = Math.max(0.01 * total, 1000); // 1% or 1000 imps min
-  const major = shown.filter(d => d.impressions >= cutoff);
-  const minor = shown.filter(d => d.impressions < cutoff);
-  const otherTotal = minor.reduce((s, r) => s + r.impressions, 0);
-  const chartData = [
-    ...major.map(m => ({ name: m.app_name, size: m.impressions })),
-    ...(otherTotal > 0 ? [{ name: 'Other', size: otherTotal }] : [])
-  ];
+  const { chartData, chartTotal } = useMemo(() => {
+    const totalImps = data.reduce((s, r) => s + (r.impressions || 0), 0)
+    const sorted = [...data]
+      .filter(d => d.impressions > 0)
+      .sort((a, b) => b.impressions - a.impressions)
+    const cutoff = Math.max(0.005 * totalImps, 500) // 0.5% or 500 imps min
+    const top = sorted.slice(0, 30) // cap categories for readability
+    const majors = top.filter(d => d.impressions >= cutoff)
+    const minors = [...sorted.slice(30), ...top.filter(d => d.impressions < cutoff)]
+    const otherTotal = minors.reduce((s, r) => s + r.impressions, 0)
+    const cleaned = majors.map(m => ({
+      name: m.app_name && m.app_name !== 'null' ? m.app_name : 'Unknown',
+      size: m.impressions
+    }))
+    if (otherTotal > 0) cleaned.push({ name: 'Other', size: otherTotal })
+    return { chartData: cleaned, chartTotal: totalImps }
+  }, [data])
 
   return (
     <div className="container mx-auto py-8">
@@ -82,8 +88,8 @@ export default function InventoryPage() {
                   nameKey="name"
                   stroke="#fff"
                   fill="#60a5fa"
-                  aspectRatio={4 / 3}
-                  content={<CustomTreemapContent />}
+                  isAnimationActive
+                  content={<CustomTreemapContent total={chartTotal} />}
                 >
                   <Tooltip content={({ payload }) => {
                     if (!payload || payload.length === 0) return null;
@@ -92,6 +98,9 @@ export default function InventoryPage() {
                       <div className="rounded bg-white/90 shadow p-2 text-xs">
                         <div className="font-medium">{p.name}</div>
                         <div>{p.size.toLocaleString()} impressions</div>
+                        {chartTotal > 0 && (
+                          <div>{Math.round((p.size / chartTotal) * 100)}% share</div>
+                        )}
                       </div>
                     );
                   }} />
@@ -106,17 +115,25 @@ export default function InventoryPage() {
 }
 
 function CustomTreemapContent(props: any) {
-  const { x, y, width, height, name } = props;
-  const labelVisible = width > 80 && height > 40;
-  const bg = name === 'Other' ? '#cbd5e1' : '#93c5fd';
+  const { x, y, width, height, name, index, depth, total } = props as any;
+  if (depth !== 1) return null; // only render leaf nodes
+  const labelVisible = width > 60 && height > 28;
+  const palette = ['#60a5fa', '#34d399', '#fbbf24', '#f472b6', '#a78bfa', '#f87171', '#38bdf8', '#22c55e', '#fb923c'];
+  const bg = name === 'Other' ? '#94a3b8' : palette[index % palette.length];
   const fg = '#0f172a';
+  const share = total > 0 ? Math.round((props.size / total) * 100) : 0;
   return (
     <g>
       <rect x={x} y={y} width={width} height={height} style={{ fill: bg, stroke: '#fff' }} />
       {labelVisible && (
-        <text x={x + 8} y={y + 20} fill={fg} fontSize={12} fontWeight={600}>
-          {name}
-        </text>
+        <>
+          <text x={x + 8} y={y + 18} fill={fg} fontSize={12} fontWeight={700}>
+            {name}
+          </text>
+          <text x={x + 8} y={y + 34} fill={fg} fontSize={11}>
+            {share}%
+          </text>
+        </>
       )}
     </g>
   );
