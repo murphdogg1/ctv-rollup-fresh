@@ -438,10 +438,12 @@ export class DatabaseService {
         rollupMap.set(`${campaignId || 'unknown'}-other`, other)
       }
 
-      const result = Array.from(rollupMap.values())
+      let result = Array.from(rollupMap.values())
       for (const r of result) {
         r.avg_vcr = r.impressions > 0 ? Math.round((r.completes / r.impressions) * 100 * 100) / 100 : 0
       }
+      // Remove any aliases/categories with zero impressions
+      result = result.filter(r => r.impressions > 0)
       return result.sort((a, b) => b.impressions - a.impressions)
     } catch (error) {
       console.warn('Database service not available:', error)
