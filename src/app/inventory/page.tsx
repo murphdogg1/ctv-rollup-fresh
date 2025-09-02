@@ -117,23 +117,22 @@ export default function InventoryPage() {
 function CustomTreemapContent(props: any) {
   const { x, y, width, height, name, index, depth, total } = props as any;
   if (depth !== 1) return null; // only render leaf nodes
-  const labelVisible = width > 60 && height > 28;
+  const labelVisible = width > 50 && height > 22;
   const palette = ['#60a5fa', '#34d399', '#fbbf24', '#f472b6', '#a78bfa', '#f87171', '#38bdf8', '#22c55e', '#fb923c'];
   const bg = name === 'Other' ? '#94a3b8' : palette[index % palette.length];
-  const fg = '#0f172a';
+  const fg = '#111827'; // near-black
   const share = total > 0 ? Math.round((props.size / total) * 100) : 0;
+  const showShare = width > 60 && height > 36;
   return (
     <g>
       <rect x={x} y={y} width={width} height={height} style={{ fill: bg, stroke: '#e5e7eb', strokeOpacity: 0.6 }} />
       {labelVisible && (
         <>
-          {/* translucent label band for readability */}
-          <rect x={x} y={y} width={width} height={28} style={{ fill: 'rgba(0,0,0,0.35)' }} />
-          <text x={x + 8} y={y + 18} fill="#ffffff" fontSize={12} fontWeight={700}>
+          <text x={x + 8} y={y + 16} fill={fg} fontSize={11}>
             {name}
           </text>
-          {height > 44 && (
-            <text x={x + 8} y={y + 34} fill="#f1f5f9" fontSize={11}>
+          {showShare && (
+            <text x={x + 8} y={y + 30} fill={fg} fontSize={10}>
               {share}%
             </text>
           )}
