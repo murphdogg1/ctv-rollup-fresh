@@ -28,6 +28,7 @@ export default function RootLayout({
                 <div className="flex items-center space-x-4">
                   <a href="/" className="text-gray-500 hover:text-gray-700 px-3 py-2 rounded-md text-sm font-medium">Dashboard</a>
                   <a href="/campaigns" className="text-gray-500 hover:text-gray-700 px-3 py-2 rounded-md text-sm font-medium">Campaigns</a>
+                  <a href="/content-networks" className="text-gray-500 hover:text-gray-700 px-3 py-2 rounded-md text-sm font-medium">Content Networks</a>
                   <a href="/normalize" className="text-gray-500 hover:text-gray-700 px-3 py-2 rounded-md text-sm font-medium">Normalize</a>
                 </div>
               </div>

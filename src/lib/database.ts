@@ -233,6 +233,128 @@ export class DatabaseService {
     }
   }
 
+  // Content Network Management
+  static async getContentNetworkNames(campaignId?: string): Promise<string[]> {
+    try {
+      // Check if we should use local database
+      if (process.env.DB_ENGINE === 'local') {
+        return await db.getContentNetworkNames(campaignId)
+      }
+      
+      const supabase = createServiceClient()
+      let query = supabase
+        .from('campaign_content_raw')
+        .select('content_network_name')
+        .not('content_network_name', 'is', null)
+        .not('content_network_name', 'eq', '')
+
+      if (campaignId) {
+        query = query.eq('campaign_id', campaignId)
+      }
+
+      const { data, error } = await query
+
+      if (error) throw new Error(`Failed to fetch content network names: ${error.message}`)
+      
+      // Extract unique network names
+      const uniqueNames = [...new Set(data?.map(item => item.content_network_name) || [])]
+      return uniqueNames.sort()
+    } catch (error) {
+      console.warn('Database service not available:', error)
+      return []
+    }
+  }
+
+  static async getContentNetworkAliases(): Promise<{alias: string, network_names: string[]}[]> {
+    try {
+      // Check if we should use local database
+      if (process.env.DB_ENGINE === 'local') {
+        return await db.getContentNetworkAliases()
+      }
+      
+      const supabase = createServiceClient()
+      const { data, error } = await supabase
+        .from('content_network_aliases')
+        .select('*')
+        .order('alias')
+
+      if (error) throw new Error(`Failed to fetch content network aliases: ${error.message}`)
+      return data || []
+    } catch (error) {
+      console.warn('Database service not available:', error)
+      return []
+    }
+  }
+
+  static async createContentNetworkAlias(alias: string, networkNames: string[]): Promise<void> {
+    try {
+      // Check if we should use local database
+      if (process.env.DB_ENGINE === 'local') {
+        await db.createContentNetworkAlias(alias, networkNames)
+        return
+      }
+      
+      const supabase = createServiceClient()
+      
+      // First, delete any existing alias with the same name
+      await supabase
+        .from('content_network_aliases')
+        .delete()
+        .eq('alias', alias)
+
+      // Insert the new alias
+      const { error } = await supabase
+        .from('content_network_aliases')
+        .insert({
+          alias,
+          network_names: networkNames
+        })
+
+      if (error) throw new Error(`Failed to create content network alias: ${error.message}`)
+    } catch (error) {
+      throw new Error(`Database service not available: ${error}`)
+    }
+  }
+
+  static async deleteContentNetworkAlias(alias: string): Promise<void> {
+    try {
+      // Check if we should use local database
+      if (process.env.DB_ENGINE === 'local') {
+        await db.deleteContentNetworkAlias(alias)
+        return
+      }
+      
+      const supabase = createServiceClient()
+      const { error } = await supabase
+        .from('content_network_aliases')
+        .delete()
+        .eq('alias', alias)
+
+      if (error) throw new Error(`Failed to delete content network alias: ${error.message}`)
+    } catch (error) {
+      throw new Error(`Database service not available: ${error}`)
+    }
+  }
+
+  static async getMappedNetworkName(networkName: string): Promise<string> {
+    try {
+      // Check if we should use local database
+      if (process.env.DB_ENGINE === 'local') {
+        return db.getMappedNetworkName(networkName)
+      }
+      
+      const supabase = createServiceClient()
+      const { data, error } = await supabase
+        .rpc('get_mapped_network_name', { network_name: networkName })
+
+      if (error) throw new Error(`Failed to get mapped network name: ${error.message}`)
+      return data || networkName
+    } catch (error) {
+      console.warn('Database service not available:', error)
+      return networkName
+    }
+  }
+
   // Rollup Reports
   static async getAppRollup(campaignId?: string): Promise<AppRollup[]> {
     try {

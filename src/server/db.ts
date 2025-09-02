@@ -34,6 +34,12 @@ export interface GenreMap {
   created_at: Date;
 }
 
+export interface ContentNetworkAlias {
+  alias: string;
+  network_names: string[];
+  created_at: Date;
+}
+
 export interface AppRollup {
   campaign_id: string;
   app_name: string;
@@ -69,6 +75,7 @@ declare global {
   var __db_campaign_content_raw: CampaignContentRaw[];
   var __db_content_aliases: ContentAlias[];
   var __db_genre_map: GenreMap[];
+  var __db_content_network_aliases: ContentNetworkAlias[];
   var __db_initialized: boolean;
 }
 
@@ -79,6 +86,7 @@ if (!global.__db_campaigns) {
   global.__db_campaign_content_raw = [];
   global.__db_content_aliases = [];
   global.__db_genre_map = [];
+  global.__db_content_network_aliases = [];
   global.__db_initialized = false;
 }
 
@@ -200,6 +208,69 @@ class InMemoryDatabase {
     return global.__db_campaign_content_raw.filter(c => c.campaign_id === campaignId);
   }
 
+  // Content Network Management
+  async getContentNetworkNames(campaignId?: string): Promise<string[]> {
+    if (!global.__db_initialized) {
+      return [];
+    }
+    
+    let content = global.__db_campaign_content_raw
+    
+    if (campaignId) {
+      content = content.filter(c => c.campaign_id === campaignId)
+    }
+    
+    const uniqueNames = [...new Set(content.map(c => c.content_network_name))]
+    return uniqueNames.filter(name => name && name.trim() !== '').sort()
+  }
+
+  async getContentNetworkAliases(): Promise<{alias: string, network_names: string[]}[]> {
+    if (!global.__db_initialized) {
+      return [];
+    }
+    
+    return global.__db_content_network_aliases.map(alias => ({
+      alias: alias.alias,
+      network_names: alias.network_names
+    }))
+  }
+
+  async createContentNetworkAlias(alias: string, networkNames: string[]): Promise<void> {
+    if (!global.__db_initialized) {
+      return;
+    }
+    
+    // Remove existing alias with same name
+    global.__db_content_network_aliases = global.__db_content_network_aliases.filter(a => a.alias !== alias)
+    
+    // Add new alias
+    global.__db_content_network_aliases.push({
+      alias,
+      network_names: networkNames,
+      created_at: new Date()
+    })
+  }
+
+  async deleteContentNetworkAlias(alias: string): Promise<void> {
+    if (!global.__db_initialized) {
+      return;
+    }
+    
+    global.__db_content_network_aliases = global.__db_content_network_aliases.filter(a => a.alias !== alias)
+  }
+
+  getMappedNetworkName(networkName: string): string {
+    if (!global.__db_initialized) {
+      return networkName;
+    }
+    
+    const alias = global.__db_content_network_aliases.find(a => 
+      a.network_names.includes(networkName)
+    );
+    
+    return alias ? alias.alias : networkName;
+  }
+
   // Content normalization
   async upsertContentAlias(contentTitleCanon: string, contentKey: string): Promise<void> {
     if (!global.__db_initialized) {
@@ -248,8 +319,10 @@ class InMemoryDatabase {
     const rollupMap = new Map<string, AppRollup>();
     
     for (const content of filtered) {
-      // Normalize network name: lowercase and trim for consistent grouping
-      const normalizedNetworkName = content.content_network_name?.toLowerCase().trim() || 'Unknown';
+      // Get mapped network name (using aliases if available)
+      const originalNetworkName = content.content_network_name || 'Unknown';
+      const mappedNetworkName = this.getMappedNetworkName(originalNetworkName);
+      const normalizedNetworkName = mappedNetworkName.toLowerCase().trim();
       
       // Use normalized name as key to prevent case-sensitive duplicates
       const key = `${content.campaign_id}-${normalizedNetworkName}`;
@@ -257,7 +330,7 @@ class InMemoryDatabase {
       if (!rollupMap.has(key)) {
         rollupMap.set(key, {
           campaign_id: content.campaign_id,
-          app_name: content.content_network_name || 'Unknown', // Keep original name for display
+          app_name: mappedNetworkName, // Use mapped name for display
           impressions: 0,
           completes: 0,
           avg_vcr: 0,
@@ -487,6 +560,7 @@ class InMemoryDatabase {
     global.__db_campaign_content_raw = [];
     global.__db_content_aliases = [];
     global.__db_genre_map = [];
+    global.__db_content_network_aliases = [];
     global.__db_initialized = false;
   }
 }
