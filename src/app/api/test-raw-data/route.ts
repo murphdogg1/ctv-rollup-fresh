@@ -53,6 +53,19 @@ export async function GET(request: NextRequest) {
       .eq('campaign_id', campaignId)
       .limit(5)
     
+    // Get full count of rollup data
+    const { count: rollupCount, error: rollupCountError } = await supabase
+      .from('rr_rollup_app')
+      .select('*', { count: 'exact', head: true })
+      .eq('campaign_id', campaignId)
+    
+    // Get count of zero impression entries
+    const { count: zeroImpressionCount, error: zeroCountError } = await supabase
+      .from('rr_rollup_app')
+      .select('*', { count: 'exact', head: true })
+      .eq('campaign_id', campaignId)
+      .eq('impressions', 0)
+    
     if (rollupError) {
       console.error('Rollup data error:', rollupError)
       return NextResponse.json(
@@ -69,7 +82,9 @@ export async function GET(request: NextRequest) {
         rollupData: rollupData,
         rawDataCount: rawData?.length || 0,
         cleanDataCount: cleanData?.length || 0,
-        rollupDataCount: rollupData?.length || 0
+        rollupDataCount: rollupData?.length || 0,
+        totalRollupCount: rollupCount || 0,
+        zeroImpressionCount: zeroImpressionCount || 0
       }
     })
   } catch (error) {
